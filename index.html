@@ -604,23 +604,23 @@
 
   <p>
   SigLIP2-only averaged precision@5 ≈ 0.27, caption-only ≈ 0.20, hybrid ≈ 0.31 across the
-20-query gold set; hybrid wins overall, but not just because it splits the difference.
+20-query gold set; hybrid wins overall, but not just because it splits the difference.<p>
 
-SigLIP2 wins clearly on queries with a strong visual/textural signal but no obvious name, "cool blue
+<p>SigLIP2 wins clearly on queries with a strong visual/textural signal but no obvious name, "cool blue
 tones" (0.6 vs. 0.0 for captions) is the sharpest example, since color temperature is something an
 embedding reads directly from pixels, but a caption only reports if the schema happened to log it
 explicitly. Captions win on queries with a real subject the schema is built to catch, like "a human
 figure" and "a grid or lattice structure" (0.4 vs. 0.0 for CLIP on both), where semantic labeling
-beats raw visual similarity.
+beats raw visual similarity.<p>
 
-The routes diverge most sharply exactly where hybrid gets interesting: On "dark and shadowy
+<p>The routes diverge most sharply exactly where hybrid gets interesting: On "dark and shadowy
 composition," "scattered random noise," and "thin wispy strands," hybrid scored higher than either
 individual route, not an average, an improvement over both, because  SigLIP2 and captions each
 caught a different correct image, and fusing let both surface in the merged top-5. But fusion isn't
 free. On "cool blue tones," where  SigLIP2 alone was strongly right, blending in the caption route's
-wrong answer pulled the hybrid score down from CLIP's 0.6 to 0.2.
+wrong answer pulled the hybrid score down from CLIP's 0.6 to 0.2.<p>
 
-That's the real finding on fusion weighting: a fixed alpha=0.5 is a compromise that wins on average
+<p>That's the real finding on fusion weighting: a fixed alpha=0.5 is a compromise that wins on average
 across a mixed query set, but it helps most when the two routes are complementary and actively
 hurts when one route is confidently right, and the other is confidently wrong. A per-query or
 adaptive alpha, leaning toward  SigLIP2 for texture/color queries and toward captions for named-subject
@@ -643,24 +643,24 @@ with. It turned out my own schema was the bottleneck: I designed `resemblance_co
 conservative on purpose, to stop the model from forcing resemblances that weren't there, and it
 worked almost too well, making the model too cautious to name a resemblance that was genuinely
 obvious. Caution and recall turned out to be a direct trade-off, not two things I could have for
-free.
+free.<p>
 
-My assumption that "obviously abstract" images would behave predictably also broke down in both
+<p>My assumption that "obviously abstract" images would behave predictably also broke down in both
 directions, not just one. The mandala pattern retrieved for "a galaxy or nebula" showed the model
 overreaching, stretching vague words like "luminous" and "radiating" into a resemblance that
 wasn't visually there. The high-contrast zigzag pattern captioned as "serene, contemplative" for the "calm and peaceful" query showed something else again: not a
 hallucinated object, but a wrong emotional read that then propagated downstream into retrieval,
 since the caption route trusted its own earlier mood label without any way to double-check it. So
 three different queries produced three different mechanisms of failure, underclaiming, over-
-claiming, and mood misjudgment, not one repeatable "the model hallucinates" story.
+claiming, and mood misjudgment, not one repeatable "the model hallucinates" story.<p>
 
-The hybrid retrieval numbers added a fourth layer: fusing the two routes isn't uniformly good. On
+<p>The hybrid retrieval numbers added a fourth layer: fusing the two routes isn't uniformly good. On
 several queries it beat both individual routes by catching different correct images from each; on
 "cool blue tones," where SigLip2 alone was strongly right (0.6) and captions were wrong (0.0), fusing
 actively pulled the score down. A fixed alpha=0.5 is a compromise across a mixed query set, not a
-universal improvement.
+universal improvement.<p>
 
-What the next version needs, to catch its own mis-seeing without me eyeballing every result: a way
+<p>What the next version needs, to catch its own mis-seeing without me eyeballing every result: a way
 to flag disagreement automatically rather than requiring a human to compare grids by hand. Concretely,
 that could mean cross-checking a caption's `perceived_subject` against SigLIP 2's own zero-shot
 classification confidence for that same label, and surfacing anything where the two disagree
@@ -688,7 +688,7 @@ different routes.
     <li>Retrieval is zero-shot throughout; no fine-tuning was performed on this corpus for either the
   embedding model or the caption/generation model.</li>
      <li>Hybrid fusion uses a single fixed alpha across all queries; the evaluation results suggest the
-  optimal weighting is query-dependent, which a static alpha cannot capture.<li>
+  optimal weighting is query-dependent, which a static alpha cannot capture.
   </ul>
 </section>
 
