@@ -1,6 +1,6 @@
 # Seeing Machines — A Multimodal Archive Companion
 
-**[View the Live Project Installation](https://YOUR_USERNAME.github.io/YOUR_REPO/)**
+**[View the Live Project Installation]([https://YOUR_USERNAME.github.io/YOUR_REPO/](https://amindromeda.github.io/Seeing-Machines/))**
 
 *Seeing Machines* is a retrieval-augmented system built over a personal archive of 346 generative visuals produced in TouchDesigner. This project investigates visual pareidolia in Vision-Language Models (VLMs). It asks: when a VLM describes a procedurally generated, non-representational image, does it stay honest about its uncertainty, or does it impose real-world objects and scenes that were never there?
 
@@ -33,10 +33,3 @@ Rather than standard generative noise, the background simulates the raw attentio
 ## 💻 Local Development & Viewing
 
 This project is a static site with no build step required. It utilizes plain HTML, CSS, and Vanilla JS.
-
-To view the site locally with proper asset pathing:
-
-1. Clone this repository:
-   ```bash
-   git clone [https://github.com/YOUR_USERNAME/YOUR_REPO.git](https://github.com/YOUR_USERNAME/YOUR_REPO.git)
-   cd YOUR_REPO
