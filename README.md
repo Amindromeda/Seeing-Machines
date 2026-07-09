@@ -1,68 +1,42 @@
-# Seeing Machines — project page
+# Seeing Machines — A Multimodal Archive Companion
 
-Static site, no build step. Three files: `index.html`, `assets/style.css`, `assets/script.js`.
+**[View the Live Project Installation](https://YOUR_USERNAME.github.io/YOUR_REPO/)**
 
-## 1. Preview it locally (before publishing anything)
+*Seeing Machines* is a retrieval-augmented system built over a personal archive of 346 generative visuals produced in TouchDesigner. This project investigates visual pareidolia in Vision-Language Models (VLMs). It asks: when a VLM describes a procedurally generated, non-representational image, does it stay honest about its uncertainty, or does it impose real-world objects and scenes that were never there?
 
-Easiest option — just double-click `index.html` and it opens in your browser.
+**Author:** Amin Rasti Pour  
+**Course:** CompSci for Designers 2 · MA Design for Digital Futures  
+**Institution:** TH Nürnberg (Summer 2026)  
+**Supervisors:** Moritz Schwind, Christopher Kopic  
 
-If you want it served properly (fonts/paths behave more like production), from this folder run:
+---
 
-```bash
-python3 -m http.server 8000
-```
+## ⚙️ Architecture & Approach
 
-then open `http://localhost:8000` in your browser. Ctrl+C to stop.
+The project evaluates retrieval through three distinct layers:
+1. **The Finder (Level 1):** Direct semantic search using joint text-image embeddings (SigLIP 2).
+2. **The Companion (Level 2):** Structured image captioning and conversational grounding (Gemma 3 4B), intentionally splitting literal visual descriptions from interpreted resemblances.
+3. **The Critic (Level 3):** A hybrid fusion evaluation comparing precision across both retrieval routes to surface VLM hallucinations, skewed readings, and genuine ambiguity.
 
-## 2. Fill in your content
+## 👁️ The Pareidolia Engine (Interactive Visualizer)
 
-Open `index.html` in any text editor and search for `<!-- REPLACE`. Every one of those
-comments marks something to swap for your real content: your name, corpus numbers, atlas
-entries, dossier entries, images. Everything else (layout, styling, the pipeline diagram,
-the schema table) is already built and doesn't need touching unless you want to.
+The background of the live project site features a custom-built, vanilla JavaScript visualizer conceptually tied to the thesis. 
 
-For **images**: replace a placeholder block that looks like this —
-```html
-<div class="thumb-placeholder">corpus sample 01</div>
-```
-— with an actual image tag:
-```html
-<img src="assets/gallery/your-file.jpg" alt="brief description">
-```
-Put your real images in a new `assets/gallery/` folder next to `style.css`.
+Rather than standard generative noise, the background simulates the raw attention mechanism of a Vision-Language Model. Two autonomous "attention heads" roam across a faint substrate of data points. As they drift, they spontaneously hallucinate geometric bounding boxes and attempt to classify the empty void using the exact vocabulary from the project's search queries (e.g., `query: "asphalt"`, `class: "tree"`). 
 
-For **atlas entries** (Retrieval Atlas section) and **dossier entries** (Mis-Seeing Dossier
-section): copy the existing `.atlas-card` / `.dossier-card` block, paste it again right below
-itself, and edit the copy. Repeat until every logged entry from your notebook's exported
-`retrieval_atlas.md` / `mis_seeing_dossier.md` is represented.
+**Interactivity:**
+* **Attention Gravity:** Moving the cursor gently pulls the latent data points toward the user.
+* **Scan Pulse:** Clicking anywhere on the canvas forces an immediate, localized VLM classification attempt.
 
-## 3. Publish to GitHub Pages
+---
 
-1. Create a **new public repository** on GitHub (Pages on free accounts requires public — only
-   publish images you're allowed to share publicly).
-2. From this folder:
+## 💻 Local Development & Viewing
+
+This project is a static site with no build step required. It utilizes plain HTML, CSS, and Vanilla JS.
+
+To view the site locally with proper asset pathing:
+
+1. Clone this repository:
    ```bash
-   git init
-   git add .
-   git commit -m "Seeing Machines project page"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-   git push -u origin main
-   ```
-3. On GitHub: go to your repo → **Settings → Pages** → under "Build and deployment", set
-   **Source: Deploy from a branch**, branch **main**, folder **/ (root)** → Save.
-4. Wait 1-2 minutes, then your site is live at:
-   `https://YOUR_USERNAME.github.io/YOUR_REPO/`
-
-## 4. Get the PDF for submission
-
-Once it's live, open the real URL (not the local file) in Chrome, `Cmd/Ctrl+P` →
-**Save as PDF** → save it alongside your notebook. Submit the PDF together with the link,
-per the brief.
-
-## Notes
-
-- The hero has a small canvas animation (particles drifting between noise and a faint eye
-  shape) — this is decorative/thematic only, it doesn't read any of your data and has no
-  dependencies. It automatically turns itself off if the visitor's OS has "reduce motion" set.
-- Everything is plain HTML/CSS/JS — no npm install, no build step, nothing to compile.
+   git clone [https://github.com/YOUR_USERNAME/YOUR_REPO.git](https://github.com/YOUR_USERNAME/YOUR_REPO.git)
+   cd YOUR_REPO
