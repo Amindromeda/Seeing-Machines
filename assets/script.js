@@ -4,16 +4,16 @@ const ctx = canvas.getContext('2d');
 let width, height;
 let dataPoints = [];
 let attentionBoxes = [];
+let scanPulses = [];
 let time = 0;
 
-// --- ACADEMIC PAREIDOLIA PARAMETERS ---
-const POINT_COUNT = 120;           // Enough for a substrate, not enough to clutter
-const BOX_SPAWN_RATE = 0.008;      // Slow, deliberate hallucination rate
-const BOX_LIFESPAN = 300;          // Long, smooth fade in and out
-const MAX_CONCURRENT_BOXES = 4;    // Caps the visual noise
-const MOUSE_ATTENTION_RATE = 0.015;// Subtle tracking of the user's cursor
-const MOUSE_REPEL_RADIUS = 120;    // Gentle parting of the data points
-// --------------------------------------
+// --- ACADEMIC PAREIDOLIA PARAMETERS (TWEAKED) ---
+const POINT_COUNT = 150;           
+const BOX_SPAWN_RATE = 0.008;      
+const BOX_LIFESPAN = 300;          
+const MAX_CONCURRENT_BOXES = 5;    
+const MOUSE_ATTRACT_RADIUS = 150;  // Mouse now pulls data in
+// ------------------------------------------------
 
 let mouse = { x: null, y: null, vx: 0, vy: 0 };
 let lastMouse = { x: null, y: null };
@@ -48,7 +48,13 @@ window.addEventListener('mouseout', () => {
     mouse.y = null;
 });
 
-// The Data Substrate (Ultra-faint)
+// NEW INTERACTION: Click to force an immediate VLM classification
+window.addEventListener('click', (e) => {
+    scanPulses.push(new ScanPulse(e.clientX, e.clientY));
+    attentionBoxes.push(new AttentionBox(e.clientX, e.clientY, true));
+});
+
+// The Data Substrate
 class DataPoint {
     constructor() {
         this.x = Math.random() * width;
@@ -64,45 +70,73 @@ class DataPoint {
         if (this.x < -10) this.x = width + 10;
         if (this.x > width + 10) this.x = -10;
 
-        // Gentle mouse repel
+        // Gentle mouse ATTRACTION (simulating attention weight)
         if (mouse.x !== null) {
             let dx = this.x - mouse.x;
             let dy = this.y - mouse.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < MOUSE_REPEL_RADIUS) {
-                let force = (MOUSE_REPEL_RADIUS - dist) / MOUSE_REPEL_RADIUS;
-                this.x += (dx / dist) * force * 1.5;
-                this.y += (dy / dist) * force * 1.5;
+            if (dist < MOUSE_ATTRACT_RADIUS) {
+                let force = (MOUSE_ATTRACT_RADIUS - dist) / MOUSE_ATTRACT_RADIUS;
+                this.x -= (dx / dist) * force * 0.8;
+                this.y -= (dy / dist) * force * 0.8;
             }
         }
     }
     draw() {
-        // Rendered as tiny, 1px faint dots instead of crosses for elegance
-        ctx.fillStyle = 'rgba(230, 230, 240, 0.06)';
+        // INCREASED OPACITY: ~15% visibility for the data points
+        ctx.fillStyle = 'rgba(230, 230, 240, 0.15)';
         ctx.beginPath();
         ctx.arc(this.x, this.y, 0.8, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
-// The Hallucination Engine
-class AttentionBox {
-    constructor(x, y, isMouse = false) {
+// The Scan Pulse (Click Effect)
+class ScanPulse {
+    constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.vx = (Math.random() - 0.5) * 0.1; // Incredibly slow drift
+        this.radius = 0;
+        this.maxLife = 60;
+        this.life = this.maxLife;
+    }
+    update() {
+        this.radius += 12; // Expands outward
+        this.life--;
+    }
+    draw() {
+        const fade = this.life / this.maxLife;
+        ctx.strokeStyle = `rgba(200, 200, 255, ${fade * 0.20})`; // 20% opacity ping
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+// The Hallucination Engine
+class AttentionBox {
+    constructor(x, y, isForced = false) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 0.1; 
         this.vy = (Math.random() - 0.5) * 0.1;
+        this.isForced = isForced;
         
-        this.targetW = Math.random() * 120 + 60;
-        this.targetH = Math.random() * 80 + 40;
+        // Forced boxes (from clicks) are larger and snap open faster
+        this.targetW = isForced ? Math.random() * 160 + 80 : Math.random() * 120 + 60;
+        this.targetH = isForced ? Math.random() * 120 + 60 : Math.random() * 80 + 40;
+        this.snapSpeed = isForced ? 0.08 : 0.03;
+
         this.w = 0;
         this.h = 0;
         
-        this.maxLife = BOX_LIFESPAN + (Math.random() * 60 - 30);
+        this.maxLife = isForced ? BOX_LIFESPAN * 0.6 : BOX_LIFESPAN + (Math.random() * 60 - 30);
         this.life = 0;
         
         this.label = LABELS[Math.floor(Math.random() * LABELS.length)];
-        this.score = (Math.random() * 0.3 + 0.05).toFixed(3);
+        // Forced boxes often spit out higher (fake) confidence scores
+        this.score = (isForced ? Math.random() * 0.5 + 0.4 : Math.random() * 0.3 + 0.05).toFixed(3);
         
         this.offsetX = (Math.random() > 0.5 ? 1 : -1) * (this.targetW / 2 + 15);
         this.offsetY = (Math.random() > 0.5 ? 1 : -1) * (this.targetH / 2 + 15);
@@ -113,22 +147,22 @@ class AttentionBox {
         this.x += this.vx;
         this.y += this.vy;
         
-        this.w += (this.targetW - this.w) * 0.03; // Buttery smooth expansion
-        this.h += (this.targetH - this.h) * 0.03;
+        this.w += (this.targetW - this.w) * this.snapSpeed; 
+        this.h += (this.targetH - this.h) * this.snapSpeed;
     }
 
     draw() {
-        // Sine wave fade for a perfect, organic appearance and disappearance
         const progress = this.life / this.maxLife;
         const fade = Math.sin(progress * Math.PI); 
 
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        // Watermark-level opacity for the boxes
-        ctx.strokeStyle = `rgba(220, 220, 235, ${fade * 0.12})`;
+        // INCREASED OPACITY: Bounding boxes now peak at ~20-25%
+        const boxOpacity = this.isForced ? 0.35 : 0.20; 
+        ctx.strokeStyle = `rgba(220, 220, 235, ${fade * boxOpacity})`;
         ctx.lineWidth = 1;
-        const s = 8;
+        const s = 10;
         const w2 = this.w / 2;
         const h2 = this.h / 2;
 
@@ -139,15 +173,14 @@ class AttentionBox {
         ctx.moveTo(-w2 + s, h2); ctx.lineTo(-w2, h2); ctx.lineTo(-w2, h2 - s);
         ctx.stroke();
 
-        // Crosshairs
-        ctx.strokeStyle = `rgba(240, 240, 255, ${fade * 0.04})`;
+        ctx.strokeStyle = `rgba(240, 240, 255, ${fade * 0.08})`;
         ctx.beginPath();
         ctx.moveTo(-w2, 0); ctx.lineTo(w2, 0);
         ctx.moveTo(0, -h2); ctx.lineTo(0, h2);
         ctx.stroke();
 
-        // Monospaced text, dialed back so it doesn't fight the HTML prose
-        ctx.fillStyle = `rgba(190, 190, 210, ${fade * 0.25})`;
+        // INCREASED OPACITY: Text now peaks at ~45% for better legibility
+        ctx.fillStyle = `rgba(200, 200, 220, ${fade * 0.45})`;
         ctx.font = '10px "IBM Plex Mono", monospace';
         ctx.textAlign = this.offsetX > 0 ? 'left' : 'right';
         
@@ -157,7 +190,7 @@ class AttentionBox {
         ctx.fillText(displayLabel, this.offsetX, this.offsetY);
         ctx.fillText(`[${this.score}]`, this.offsetX, this.offsetY + 14);
         
-        ctx.strokeStyle = `rgba(220, 220, 240, ${fade * 0.08})`;
+        ctx.strokeStyle = `rgba(220, 220, 240, ${fade * 0.15})`;
         ctx.beginPath();
         ctx.moveTo(this.offsetX > 0 ? w2 : -w2, this.offsetY > 0 ? h2 : -h2);
         ctx.lineTo(this.offsetX, this.offsetY - 5);
@@ -174,6 +207,7 @@ function init() {
         dataPoints.push(new DataPoint());
     }
     attentionBoxes = [];
+    scanPulses = [];
     animate();
 }
 
@@ -181,32 +215,26 @@ function animate() {
     time++;
     ctx.clearRect(0, 0, width, height);
     
-    // Draw substrate
+    // Draw Substrate
     dataPoints.forEach(p => {
         p.update();
         p.draw();
     });
 
-    // Spontaneous hallucination
+    // Draw Scan Pulses
+    for (let i = scanPulses.length - 1; i >= 0; i--) {
+        let pulse = scanPulses[i];
+        pulse.update();
+        pulse.draw();
+        if (pulse.life <= 0) scanPulses.splice(i, 1);
+    }
+
+    // Ambient Hallucination
     if (Math.random() < BOX_SPAWN_RATE && attentionBoxes.length < MAX_CONCURRENT_BOXES) {
         attentionBoxes.push(new AttentionBox(
             Math.random() * width, 
             Math.random() * height
         ));
-    }
-
-    // Mouse attention
-    if (mouse.x !== null) {
-        const velocity = Math.abs(mouse.vx) + Math.abs(mouse.vy);
-        const dynamicRate = MOUSE_ATTENTION_RATE + (velocity * 0.002);
-        
-        if (Math.random() < dynamicRate && attentionBoxes.length < MAX_CONCURRENT_BOXES) {
-            attentionBoxes.push(new AttentionBox(
-                mouse.x + (Math.random() * 100 - 50),
-                mouse.y + (Math.random() * 100 - 50),
-                true
-            ));
-        }
     }
 
     // Update and prune boxes
