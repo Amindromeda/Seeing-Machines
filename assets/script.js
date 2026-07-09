@@ -2,166 +2,176 @@ const canvas = document.getElementById('hero-canvas');
 const ctx = canvas.getContext('2d');
 
 let width, height;
-let points = [];
-let time = 0;
+let attentionBoxes = [];
 
-// --- LATENT GAZE PARAMETERS (Ultra-Subtle) ---
-const POINT_COUNT = 300;           // High count, but mostly invisible
-const BASE_OPACITY = 0.02;         // Barely perceptible background state
-const ACTIVE_OPACITY = 0.20;       // Max opacity when the machine "focuses" here
-const ATTENTION_RADIUS = 160;      // How wide the machine's spotlight is
-const CONNECTION_DISTANCE = 50;    // Only connect points that are very close
-// ---------------------------------------------
+// --- REFINED PAREIDOLIA PARAMETERS ---
+const BOX_SPAWN_RATE = 0.01;       // Slower, more deliberate spawns
+const BOX_LIFESPAN = 400;          // Lingers for a long, slow fade (~6-7 seconds)
+const MAX_CONCURRENT_BOXES = 4;    // Strict limit keeps the page mostly empty
+const MOUSE_ATTENTION_RATE = 0.05; // Gentle curiosity around the cursor
+// ------------------------------------
 
-let mouse = { x: -1000, y: -1000 };
+let mouse = { x: null, y: null, vx: 0, vy: 0 };
+let lastMouse = { x: null, y: null };
 
-// The machine's wandering attention heads
-let roamers = []; 
+// VLM Vocabulary
+const LABELS = [
+    'null_space_feature', 'latent_artifact', 'phantom_edge', 
+    'noise_cluster', 'conf: 0.12', 'ambiguous_topology', 
+    'attention_head_04', 'ghost_data', 'class: unseen', 
+    'resemblance: abstract'
+];
 
 function resize() {
     width = window.innerWidth;
     height = window.innerHeight;
     canvas.width = width;
     canvas.height = height;
-    
-    // Initialize roamers on resize to ensure they have valid coordinates
-    if (roamers.length === 0) {
-        roamers = [
-            { x: width * 0.3, y: height * 0.3, vx: 0.3, vy: 0.2 },
-            { x: width * 0.7, y: height * 0.7, vx: -0.2, vy: 0.4 }
-        ];
-    }
 }
 
 window.addEventListener('resize', resize);
 window.addEventListener('mousemove', (e) => {
+    lastMouse.x = mouse.x;
+    lastMouse.y = mouse.y;
     mouse.x = e.clientX;
     mouse.y = e.clientY;
+    mouse.vx = mouse.x - lastMouse.x;
+    mouse.vy = mouse.y - lastMouse.y;
 });
 window.addEventListener('mouseout', () => {
-    mouse.x = -1000;
-    mouse.y = -1000;
+    mouse.x = null;
+    mouse.y = null;
 });
 
-class TokenNode {
-    constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.originX = this.x;
-        this.originY = this.y;
-        this.seed = Math.random() * Math.PI * 2;
-        this.attentionWeight = 0; 
+class AttentionBox {
+    constructor(x, y, isMouse = false) {
+        this.x = x;
+        this.y = y;
+        // Gives the boxes a very slow, drifting "floating" feeling
+        this.vx = (Math.random() - 0.5) * 0.2;
+        this.vy = (Math.random() - 0.5) * 0.2;
+        
+        this.targetW = Math.random() * 140 + 60;
+        this.targetH = Math.random() * 100 + 40;
+        this.w = 0;
+        this.h = 0;
+        
+        this.maxLife = BOX_LIFESPAN + (Math.random() * 100 - 50);
+        this.life = 0; // Starts at 0 and counts up for smooth math
+        
+        this.label = LABELS[Math.floor(Math.random() * LABELS.length)];
+        this.score = (Math.random() * 0.3 + 0.05).toFixed(3);
+        
+        this.offsetX = (Math.random() > 0.5 ? 1 : -1) * (this.targetW / 2 + 20);
+        this.offsetY = (Math.random() > 0.5 ? 1 : -1) * (this.targetH / 2 + 20);
     }
-
+    
     update() {
-        // Subtle ambient drifting
-        this.originX += Math.sin(time * 0.002 + this.seed) * 0.1;
-        this.originY += Math.cos(time * 0.002 + this.seed) * 0.1;
-
-        // Wrap around screen
-        if (this.originX < -20) this.originX = width + 20;
-        if (this.originX > width + 20) this.originX = -20;
-        if (this.originY < -20) this.originY = height + 20;
-        if (this.originY > height + 20) this.originY = -20;
-
-        this.x = this.originX;
-        this.y = this.originY;
-        this.attentionWeight = 0; // Reset every frame
-
-        // Calculate influence from roaming attention heads
-        roamers.forEach(r => {
-            let dx = this.x - r.x;
-            let dy = this.y - r.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < ATTENTION_RADIUS) {
-                let weight = 1 - (dist / ATTENTION_RADIUS);
-                this.attentionWeight = Math.max(this.attentionWeight, weight);
-                // The machine gently pulls data points together as it analyzes them
-                this.x -= dx * weight * 0.15;
-                this.y -= dy * weight * 0.15;
-            }
-        });
-
-        // Calculate influence from user mouse
-        let dxMouse = this.x - mouse.x;
-        let dyMouse = this.y - mouse.y;
-        let distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
-        if (distMouse < ATTENTION_RADIUS) {
-            let weight = 1 - (distMouse / ATTENTION_RADIUS);
-            this.attentionWeight = Math.max(this.attentionWeight, weight);
-            this.x -= dxMouse * weight * 0.15;
-            this.y -= dyMouse * weight * 0.15;
-        }
+        this.life++;
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // Smooth, easing opening animation
+        this.w += (this.targetW - this.w) * 0.05;
+        this.h += (this.targetH - this.h) * 0.05;
     }
 
     draw() {
-        let currentOpacity = BASE_OPACITY + (this.attentionWeight * ACTIVE_OPACITY);
-        
-        ctx.fillStyle = `rgba(220, 220, 235, ${currentOpacity})`;
+        // Creates a perfect, seamless parabola fade (0 -> 1 -> 0)
+        const progress = this.life / this.maxLife;
+        const fade = Math.sin(progress * Math.PI); 
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Draw Bounding Box Corners (Faint, frosty white)
+        ctx.strokeStyle = `rgba(255, 255, 255, ${fade * 0.15})`;
+        ctx.lineWidth = 1;
+        const s = 12; // Corner segment length
+        const w2 = this.w / 2;
+        const h2 = this.h / 2;
+
         ctx.beginPath();
-        // Draw tiny 1px dots
-        ctx.arc(this.x, this.y, 1, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-w2, -h2 + s); ctx.lineTo(-w2, -h2); ctx.lineTo(-w2 + s, -h2);
+        ctx.moveTo(w2 - s, -h2); ctx.lineTo(w2, -h2); ctx.lineTo(w2, -h2 + s);
+        ctx.moveTo(w2, h2 - s); ctx.lineTo(w2, h2); ctx.lineTo(w2 - s, h2);
+        ctx.moveTo(-w2 + s, h2); ctx.lineTo(-w2, h2); ctx.lineTo(-w2, h2 - s);
+        ctx.stroke();
+
+        // Ultra-faint Crosshairs
+        ctx.strokeStyle = `rgba(255, 255, 255, ${fade * 0.03})`;
+        ctx.beginPath();
+        ctx.moveTo(-w2, 0); ctx.lineTo(w2, 0);
+        ctx.moveTo(0, -h2); ctx.lineTo(0, h2);
+        ctx.stroke();
+
+        // Monospaced Technical Labeling
+        ctx.fillStyle = `rgba(200, 200, 215, ${fade * 0.35})`;
+        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.textAlign = this.offsetX > 0 ? 'left' : 'right';
+        
+        // Very rare text scrambling glitch
+        let displayLabel = this.label;
+        if (Math.random() > 0.99) displayLabel = displayLabel.split('').sort(() => 0.5 - Math.random()).join('');
+
+        ctx.fillText(displayLabel, this.offsetX, this.offsetY);
+        ctx.fillText(`[${this.score}]`, this.offsetX, this.offsetY + 14);
+        
+        // Connecting line
+        ctx.strokeStyle = `rgba(255, 255, 255, ${fade * 0.08})`;
+        ctx.beginPath();
+        ctx.moveTo(this.offsetX > 0 ? w2 : -w2, this.offsetY > 0 ? h2 : -h2);
+        ctx.lineTo(this.offsetX, this.offsetY - 5);
+        ctx.stroke();
+
+        ctx.restore();
     }
 }
 
 function init() {
     resize();
-    points = [];
-    for (let i = 0; i < POINT_COUNT; i++) {
-        points.push(new TokenNode());
-    }
+    attentionBoxes = [];
     animate();
 }
 
 function animate() {
-    time++;
     ctx.clearRect(0, 0, width, height);
     
-    // Move the autonomous attention roamers
-    roamers.forEach(r => {
-        r.x += r.vx;
-        r.y += r.vy;
-        // Bounce off walls gently
-        if (r.x < 0 || r.x > width) r.vx *= -1;
-        if (r.y < 0 || r.y > height) r.vy *= -1;
-    });
-    
-    // Update all points first
-    points.forEach(p => p.update());
+    // Machine hallucinates in the empty void
+    if (Math.random() < BOX_SPAWN_RATE && attentionBoxes.length < MAX_CONCURRENT_BOXES) {
+        attentionBoxes.push(new AttentionBox(
+            Math.random() * width, 
+            Math.random() * height
+        ));
+    }
 
-    // Draw spontaneous "hallucinated" connections
-    // Only draw lines if BOTH points are currently under heavy attention
-    for (let i = 0; i < points.length; i++) {
-        if (points[i].attentionWeight < 0.2) continue; // Skip un-attended points to save rendering power
-
-        for (let j = i + 1; j < points.length; j++) {
-            if (points[j].attentionWeight < 0.2) continue;
-
-            let dx = points[i].x - points[j].x;
-            let dy = points[i].y - points[j].y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            
-            if (dist < CONNECTION_DISTANCE) {
-                // The more the machine focuses, the stronger the connection appears
-                let combinedAttention = (points[i].attentionWeight + points[j].attentionWeight) / 2;
-                let opacity = combinedAttention * 0.4 * (1 - dist / CONNECTION_DISTANCE);
-                
-                ctx.strokeStyle = `rgba(200, 200, 230, ${opacity})`;
-                ctx.lineWidth = 0.5; // Razor-thin lines
-                ctx.beginPath();
-                ctx.moveTo(points[i].x, points[i].y);
-                ctx.lineTo(points[j].x, points[j].y);
-                ctx.stroke();
-            }
+    // Machine occasionally tracks the user's cursor
+    if (mouse.x !== null) {
+        const velocity = Math.abs(mouse.vx) + Math.abs(mouse.vy);
+        const dynamicRate = MOUSE_ATTENTION_RATE + (velocity * 0.002);
+        
+        if (Math.random() < dynamicRate && attentionBoxes.length < MAX_CONCURRENT_BOXES) {
+            attentionBoxes.push(new AttentionBox(
+                mouse.x + (Math.random() * 120 - 60),
+                mouse.y + (Math.random() * 120 - 60),
+                true
+            ));
         }
     }
 
-    // Draw the dots on top of the lines
-    points.forEach(p => p.draw());
+    // Update and prune boxes
+    for (let i = attentionBoxes.length - 1; i >= 0; i--) {
+        let box = attentionBoxes[i];
+        box.update();
+        box.draw();
+        
+        if (box.life >= box.maxLife) {
+            attentionBoxes.splice(i, 1);
+        }
+    }
     
     requestAnimationFrame(animate);
 }
 
-// Boot up the Latent Gaze
+// Boot up
 init();
