@@ -251,13 +251,19 @@
     <div class="schema-field"><code>ambiguous_or_uncertain</code><span>what the model itself flags as unsure</span></div>
   </div>
   <p>
-    
+    <!-- REPLACE: your justification -->
     The split between <code>literal_description</code> and <code>perceived_subject</code> exists
     because my research question is specifically about pareidolia: whether the model reads
     real-world meaning into visuals with no representational intent. A single blended field would
     hide that behavior; forcing the model to describe visually first, then separately commit to
     (or decline) a real-world resemblance with a stated confidence, makes the phenomenon directly
     measurable and sortable across the whole corpus.
+  </p>
+
+  <h3>SigLIP 2 vs. caption-mediated retrieval</h3>
+  <p><!-- REPLACE: 2-3 sentences once you've actually run the comparison queries -->
+    SigLIP 2 retrieval and caption-mediated retrieval were run on the same [5+] queries side by
+    side.
   </p>
 </section>
 
@@ -269,7 +275,7 @@
     <p class="section-label">Results — Level 1</p>
     <h2>Retrieval Atlas</h2>
     <p>
-      Documented queries against the SigLIP 2 embedding space, successes and failures, each
+      Documented queries against the SigLIP 2 embedding space — successes and failures, each
       explained in terms of what the embedding is actually keying on.
     </p>
   </div>
@@ -281,7 +287,7 @@
       <h3>"fabric or woven texture"</h3>
     </div>
     <div class="card-image">
-      <img src="atlas/download (15).png" alt="Fabric or woven texture retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
+      <img src="atlas/download.png" alt="Fabric or woven texture retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
     </div>
     <p class="card-explanation">Good one, the dark woven textures look like actual fabric weave and the smooth cream swirl ones look like folded cloth, solid match across the board.</p>
   </div>
@@ -459,7 +465,7 @@
       <h3>"bicycle"</h3>
     </div>
     <div class="card-image">
-      <img src="atlas/download.png" alt="Bicycle retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
+      <img src="atlas/download%20(6).png" alt="Bicycle retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
     </div>
     <p class="card-explanation">No real bicycle match obviously, but interesting that the circular mandala/kaleidoscope patterns showed up, guess the spoke-like radial lines got associated with wheels somehow.</p>
   </div>
@@ -512,35 +518,79 @@
     </p>
   </div>
 
-  <!-- REPLACE: duplicate this .dossier-card block per logged case, from your exported
-       mis_seeing_dossier.md. issue_type sets the tag shown. -->
+  <!-- DOSSIER ENTRY 1: Asphalt -->
   <div class="dossier-card">
-    <div class="dossier-image thumb-placeholder">image here</div>
+    <div class="dossier-image">
+      <img src="asphalt.png" alt="Asphalt query retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
+    </div>
     <div class="dossier-body">
-      <span class="issue-chip">hallucination</span>
-      <div class="dossier-row"><span class="dossier-label">Model said</span><p>quoted model output goes here</p></div>
-      <div class="dossier-row"><span class="dossier-label">Actually is</span><p>ground truth goes here</p></div>
-      <div class="dossier-row"><span class="dossier-label">Analysis</span><p>your interpretation of why this happened goes here</p></div>
+      <span class="issue-chip">retrieval_mismatch</span>
+      <div class="dossier-row"><span class="dossier-label">Query</span><p>"asphalt"</p></div>
+      <div class="dossier-row"><span class="dossier-label">Model said</span><p>Chat answer: "I cannot confirm that any of these images depict asphalt"</p></div>
+      <div class="dossier-row"><span class="dossier-label">Actually is</span><p>A pastel-colored butterfly render, no textural or color relation to asphalt</p></div>
+      <div class="dossier-row"><span class="dossier-label">Analysis</span><p>Caption-mediated retrieval for 'asphalt' surfaced this butterfly render at rank 5, unrelated to any of the genuinely granular dark textures found elsewhere. Likely matched on incidental shared caption vocabulary rather than visual similarity, since nothing about a pastel butterfly resembles asphalt. Worth noting the chat model itself stayed honest and refused to confirm any image as asphalt when asked directly.</p></div>
     </div>
   </div>
 
-  <p class="prose section-note"><!-- REPLACE/DELETE --> Add remaining dossier entries here.</p>
+  <!-- DOSSIER ENTRY 2: Tree -->
+  <div class="dossier-card">
+    <div class="dossier-image">
+      <img src="tree.png" alt="Tree query retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
+    </div>
+    <div class="dossier-body">
+      <span class="issue-chip">missed_resemblance</span>
+      <div class="dossier-row"><span class="dossier-label">Query</span><p>"tree"</p></div>
+      <div class="dossier-row"><span class="dossier-label">Model said</span><p>Captioned as abstract, no clear resemblance noted; chat explicitly denied any tree resemblance</p></div>
+      <div class="dossier-row"><span class="dossier-label">Actually is</span><p>A clearly tree-shaped particle render, conical evergreen silhouette</p></div>
+      <div class="dossier-row"><span class="dossier-label">Analysis</span><p>SigLIP2 correctly retrieved this as a tree purely from visual silhouette (conical, tapering, evergreen-like branch structure). The caption route missed it entirely: the captioning model described it as abstract geometric/particle structure with no noted resemblance, so no caption text existed for the query 'tree' to match against. My schema deliberately discourages forcing resemblances to avoid false positives elsewhere, which cost recall here on an obvious real case.</p></div>
+    </div>
+  </div>
+
+  <!-- DOSSIER ENTRY 3: Galaxy -->
+  <div class="dossier-card">
+    <div class="dossier-image">
+      <img src="galaxy.png" alt="Galaxy or nebula query retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
+    </div>
+    <div class="dossier-body">
+      <span class="issue-chip">rationalized_false_resemblance</span>
+      <div class="dossier-row"><span class="dossier-label">Query</span><p>"a galaxy or nebula"</p></div>
+      <div class="dossier-row"><span class="dossier-label">Model said</span><p>"Radiating streaks and dense fields... somewhat similar to how light and gas flow in nebulae"</p></div>
+      <div class="dossier-row"><span class="dossier-label">Actually is</span><p>A symmetrical geometric kaleidoscope shader, not a cosmic or celestial form</p></div>
+      <div class="dossier-row"><span class="dossier-label">Analysis</span><p>For 'a galaxy or nebula,' caption-mediated retrieval surfaced this GLSL shader, and rather than rejecting the match the model stretched to justify it, citing 'radiating streaks,' 'luminous,' and 'glow' as vague evidence of a cosmic resemblance. These are words shared with genuine nebula-like renders in the corpus, but a symmetrical mandala bears no real visual resemblance to a galaxy. Different failure mode than the tree case: here the model overreaches instead of underclaiming.</p></div>
+    </div>
+  </div>
+
+  <!-- DOSSIER ENTRY 4: Calm -->
+  <div class="dossier-card">
+    <div class="dossier-image">
+      <img src="calm.png" alt="Calm and peaceful scene query retrieval result" style="width: 100%; height: auto; border-radius: 8px; display: block;">
+    </div>
+    <div class="dossier-body">
+      <span class="issue-chip">mislabeled_mood</span>
+      <div class="dossier-row"><span class="dossier-label">Query</span><p>"a calm and peaceful scene"</p></div>
+      <div class="dossier-row"><span class="dossier-label">Model said</span><p>"Serene, contemplative, slightly melancholic, with a hint of warmth"</p></div>
+      <div class="dossier-row"><span class="dossier-label">Actually is</span><p>A stark, high-contrast symmetrical pattern with no calm but melancholic visual qualities</p></div>
+      <div class="dossier-row"><span class="dossier-label">Analysis</span><p>This high-contrast, aggressive pattern was captioned with the mood 'serene, contemplative' which doesn't match what's visually there. Caption-mediated retrieval trusted that mood label for the query 'a calm and peaceful scene' and ranked this image first, ahead of genuinely calmer sunset renders elsewhere in the corpus, and also surfaced two visually chaotic fire-toned images for the same reason. Shows the caption route inherits whatever mood-reading errors the VLM made at captioning time, with no way to correct for it at retrieval time.</p></div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ============================================================ -->
-<!-- RESULTS: EVALUATION (Level 3, optional)                       -->
+<!-- RESULTS: EVALUATION (Level 3)                                 -->
 <!-- ============================================================ -->
 <section class="section prose" id="evaluation">
   <p class="section-label">Results — Level 3</p>
   <h2>Evaluation</h2>
   <p>
-    <!-- REPLACE/DELETE this whole section if Level 3 wasn't reached -->
     Precision@5 measured across all three retrieval routes against a [20-30]-query gold-standard
     set with known-correct images.
   </p>
 
-  <!-- REPLACE: swap for your actual bar chart image, exported from the notebook -->
-  <div class="thumb-placeholder wide">precision@5 bar chart goes here</div>
+  <!-- Precision@5 bar chart -->
+  <div class="eval-chart">
+    <img src="barchart.png" alt="Precision@5 comparison across retrieval routes" style="width: 100%; height: auto; border-radius: 8px; display: block;">
+  </div>
 
   <table class="eval-table">
     <thead><tr><th>Route</th><th>Mean precision@5</th></tr></thead>
