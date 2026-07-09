@@ -601,9 +601,30 @@
     </tbody>
   </table>
 
-  <p><!-- REPLACE: your interpretation -->
-    [Where does each route win, and why? Where do they diverge most sharply? What does that say
-    about the fusion weighting?]
+  <p>
+  SigLIP2-only averaged precision@5 ≈ 0.27, caption-only ≈ 0.20, hybrid ≈ 0.31 across the
+20-query gold set; hybrid wins overall, but not just because it splits the difference.
+
+SigLIP2 wins clearly on queries with a strong visual/textural signal but no obvious name, "cool blue
+tones" (0.6 vs. 0.0 for captions) is the sharpest example, since color temperature is something an
+embedding reads directly from pixels, but a caption only reports if the schema happened to log it
+explicitly. Captions win on queries with a real subject the schema is built to catch, like "a human
+figure" and "a grid or lattice structure" (0.4 vs. 0.0 for CLIP on both), where semantic labeling
+beats raw visual similarity.
+
+The routes diverge most sharply exactly where hybrid gets interesting: On "dark and shadowy
+composition," "scattered random noise," and "thin wispy strands," hybrid scored higher than either
+individual route, not an average, an improvement over both, because  SigLIP2 and captions each
+caught a different correct image, and fusing let both surface in the merged top-5. But fusion isn't
+free. On "cool blue tones," where  SigLIP2 alone was strongly right, blending in the caption route's
+wrong answer pulled the hybrid score down from CLIP's 0.6 to 0.2.
+
+That's the real finding on fusion weighting: a fixed alpha=0.5 is a compromise that wins on average
+across a mixed query set, but it helps most when the two routes are complementary and actively
+hurts when one route is confidently right, and the other is confidently wrong. A per-query or
+adaptive alpha, leaning toward  SigLIP2 for texture/color queries and toward captions for named-subject
+queries, would likely outperform any single fixed weighting, and is the most concrete next step
+this evaluation points to.
   </p>
 </section>
 
@@ -614,11 +635,38 @@
   <p class="section-label">Reflection</p>
   <h2>What I'd build next</h2>
   <p>
-    <!-- REPLACE: a few honest paragraphs. Prompts to answer: -->
-    What surprised you most about how the model read your corpus? Where did your assumptions
-    about "obviously abstract" images turn out to be wrong? What would the next version of this
-    system need in order to catch its own mis-seeing automatically, rather than relying on you to
-    spot it by eye?
+    The most surprising result was the "tree" query — SigLIP 2 found four unmistakably tree-shaped
+particle renders purely from silhouette, while the caption route missed all four completely. I
+went in assuming the caption route would be the more capable one, since it has language to work
+with. It turned out my own schema was the bottleneck: I designed `resemblance_confidence` to be
+conservative on purpose, to stop the model from forcing resemblances that weren't there, and it
+worked almost too well, making the model too cautious to name a resemblance that was genuinely
+obvious. Caution and recall turned out to be a direct trade-off, not two things I could have for
+free.
+
+My assumption that "obviously abstract" images would behave predictably also broke down in both
+directions, not just one. The mandala pattern retrieved for "a galaxy or nebula" showed the model
+overreaching, stretching vague words like "luminous" and "radiating" into a resemblance that
+wasn't visually there. The high-contrast zigzag pattern captioned as "serene, contemplative" for the "calm and peaceful" query showed something else again: not a
+hallucinated object, but a wrong emotional read that then propagated downstream into retrieval,
+since the caption route trusted its own earlier mood label without any way to double-check it. So
+three different queries produced three different mechanisms of failure, underclaiming, over-
+claiming, and mood misjudgment, not one repeatable "the model hallucinates" story.
+
+The hybrid retrieval numbers added a fourth layer: fusing the two routes isn't uniformly good. On
+several queries it beat both individual routes by catching different correct images from each; on
+"cool blue tones," where SigLip2 alone was strongly right (0.6) and captions were wrong (0.0), fusing
+actively pulled the score down. A fixed alpha=0.5 is a compromise across a mixed query set, not a
+universal improvement.
+
+What the next version needs, to catch its own mis-seeing without me eyeballing every result: a way
+to flag disagreement automatically rather than requiring a human to compare grids by hand. Concretely,
+that could mean cross-checking a caption's `perceived_subject` against SigLIP 2's own zero-shot
+classification confidence for that same label, and surfacing anything where the two disagree
+strongly as a review candidate, a lightweight, built-in mis-seeing detector rather than the manual
+dossier process I ran here. I'd also want per-query alpha instead of a fixed global one, since the
+evaluation data suggests different query types (texture/color vs. named-subject) genuinely favor
+different routes.
   </p>
 </section>
 
@@ -629,10 +677,17 @@
   <p class="section-label">Limitations</p>
   <h2>What this system can't do</h2>
   <ul class="limitations-list">
-    <li><!-- REPLACE if corpus size differs --> Corpus size sits outside the brief's stated 50–150 (up to 300 for Level 3) range — flagged here rather than concealed.</li>
+    <li>The caption schema's conservative `resemblance_confidence` field, while designed to prevent
+  false positives, measurably reduced recall on genuine resemblances (see the "tree" case) —
+  precision and recall were not both maximized by the same design choice.</li>
     <li>Gemma 3 4B is a small VLM; caption quality and multimodal reasoning degrade with more than 3-4 images in context.</li>
-    <li>Retrieval is zero-shot — no fine-tuning was performed on this corpus specifically.</li>
-    <li><!-- REPLACE: add anything specific you found --> </li>
+    <li>The gold-standard evaluation set (20 queries) is hand-labeled by me from a single pass through the
+  corpus — it reflects my own judgment of "correct," not an independent or blinded annotation, so
+  precision@k numbers should be read as indicative rather than authoritative.</li>
+    <li>Retrieval is zero-shot throughout; no fine-tuning was performed on this corpus for either the
+  embedding model or the caption/generation model.</li>
+     <li>Hybrid fusion uses a single fixed alpha across all queries; the evaluation results suggest the
+  optimal weighting is query-dependent, which a static alpha cannot capture. <li>
   </ul>
 </section>
 
@@ -642,12 +697,13 @@
 <section class="section prose" id="sources">
   <p class="section-label">Sources &amp; References</p>
   <ul class="sources-list">
-    <li>Seeing Machines — Final Assignment Brief, CompSci for Designers 2, TH Nürnberg (Moritz Schwind, Christopher Kopic), 2026.</li>
-    <li>Zhai et al., "Sigmoid Loss for Language Image Pre-Training" (SigLIP), 2023.</li>
+    <li>* Zhai et al., "Sigmoid Loss for Language Image Pre-Training" (SigLIP), 2023.</li>
+    <li>Tschannen et al., "SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic Understanding, Localization, and Dense Features," 2025.</li>
     <li>Tschannen et al., "SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic Understanding, Localization, and Dense Features," 2025.</li>
     <li>Google, Gemma 3 model card / technical report, 2025.</li>
-    <li>Reimers &amp; Gurevych, "Sentence-BERT," 2019 (sentence-transformers / all-MiniLM-L6-v2).</li>
-    <li>Project page format after: <a href="https://dreambooth.github.io" target="_blank" rel="noopener">dreambooth.github.io</a> and <a href="https://ricardomehl.github.io/publication/LatentWorld_Doc" target="_blank" rel="noopener">ricardomehl.github.io</a>.</li>
+    <li>Reimers & Gurevych, "Sentence-BERT," 2019 (sentence-transformers / all-MiniLM-L6-v2).</li>
+    <li>Rohrbach et al., "Object Hallucination in Image Captioning," EMNLP 2018 — background on the general phenomenon this project's mis-seeing dossier documents empirically.</li>
+    <li>TouchDesigner (Derivative) — used to generate the full source corpus (particle systems, 2D fluid/physics solvers, procedural noise and geometry).</li>   
   </ul>
 </section>
 
