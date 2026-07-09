@@ -54,10 +54,12 @@
     .dossier-card:hover {
         background: rgba(255, 255, 255, 0.05);
     }
-    .dossier-image {
-        flex: 1 1 300px;
-        display: flex;
-        justify-content: center;
+    .dossier-image img {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 280px !important; /* Prevents them from getting absurdly tall */
+        object-fit: contain !important;
+        align-self: center !important;
     }
     .dossier-body {
         flex: 2 1 400px;
