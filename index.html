@@ -737,11 +737,11 @@ different routes.
   <h2>What this system can't do</h2>
   <ul class="limitations-list">
     <li>The caption schema's conservative `resemblance_confidence` field, while designed to prevent
-  false positives, measurably reduced recall on genuine resemblances (see the "tree" case) —
+  false positives, measurably reduced recall on genuine resemblances (see the "tree" case)
   precision and recall were not both maximized by the same design choice.</li>
     <li>Gemma 3 4B is a small VLM; caption quality and multimodal reasoning degrade with more than 3-4 images in context.</li>
     <li>The gold-standard evaluation set (20 queries) is hand-labeled by me from a single pass through the
-  corpus — it reflects my own judgment of "correct," not an independent or blinded annotation, so
+  corpus, it reflects my own judgment of "correct," not an independent or blinded annotation, so
   precision@k numbers should be read as indicative rather than authoritative.</li>
     <li>Retrieval is zero-shot throughout; no fine-tuning was performed on this corpus for either the
   embedding model or the caption/generation model.</li>
