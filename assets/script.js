@@ -3,18 +3,17 @@ const ctx = canvas.getContext('2d');
 
 let width, height;
 let particles = [];
+let time = 0;
 
-// --- EXPLORE THESE PARAMETERS ---
-// Tweak these numbers to change the density and mood of the background
-const PARTICLE_COUNT = 100;         // How many nodes on screen
-const CONNECTION_DISTANCE = 160;    // How close they must be to draw a line
-const MOUSE_REPEL_RADIUS = 150;     // How far away they sense your mouse
-const BASE_SPEED = 0.5;             // How fast they drift
+// --- ORGANIC FLOW PARAMETERS ---
+const PARTICLE_COUNT = 85;          // Slightly fewer for a cleaner look
+const CONNECTION_DISTANCE = 180;    // Reach for connections
+const MOUSE_REPEL_RADIUS = 200;     // Interaction radius
+const FLOW_SPEED = 0.0005;          // How fast the "current" shifts
 // --------------------------------
 
 let mouse = { x: null, y: null };
 
-// Ensure the canvas stretches perfectly across the screen
 function resize() {
     width = window.innerWidth;
     height = window.innerHeight;
@@ -32,40 +31,41 @@ window.addEventListener('mouseout', () => {
     mouse.y = null;
 });
 
-class Particle {
-    constructor() {
+class OrganicNode {
+    constructor(index) {
+        this.index = index;
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        
-        // Random trajectory, normalized speed
-        const angle = Math.random() * Math.PI * 2;
-        this.vx = Math.cos(angle) * BASE_SPEED;
-        this.vy = Math.sin(angle) * BASE_SPEED;
-        
-        // Flat 2D vector style geometry
-        this.radius = Math.random() * 2 + 1.5; 
+        // Seed values to give each node a unique offset in the flow field
+        this.seedX = Math.random() * 1000;
+        this.seedY = Math.random() * 1000;
+        this.radius = Math.random() * 1.5 + 1; // Flat 2D circles
     }
 
     update() {
-        this.x += this.vx;
-        this.y += this.vy;
+        // Pseudo-noise fluid movement using overlapping sine waves
+        let noiseX = Math.sin((this.y * 0.005) + time + this.seedX) * 0.8;
+        let noiseY = Math.cos((this.x * 0.005) + time + this.seedY) * 0.8;
+        
+        this.x += noiseX;
+        this.y += noiseY;
 
-        // Wrap around screen instead of hard bouncing for a continuous infinite flow
-        if (this.x < -50) this.x = width + 50;
-        if (this.x > width + 50) this.x = -50;
-        if (this.y < -50) this.y = height + 50;
-        if (this.y > height + 50) this.y = -50;
+        // Wrap around smoothly
+        if (this.x < -100) this.x = width + 100;
+        if (this.x > width + 100) this.x = -100;
+        if (this.y < -100) this.y = height + 100;
+        if (this.y > height + 100) this.y = -100;
 
-        // Subtle mouse repulsion (simulating data moving out of the way)
+        // Soft, viscous mouse repulsion
         if (mouse.x != null) {
             let dx = this.x - mouse.x;
             let dy = this.y - mouse.y;
             let distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance < MOUSE_REPEL_RADIUS) {
-                const force = (MOUSE_REPEL_RADIUS - distance) / MOUSE_REPEL_RADIUS;
-                this.x += (dx / distance) * force * 3;
-                this.y += (dy / distance) * force * 3;
+                const force = Math.pow((MOUSE_REPEL_RADIUS - distance) / MOUSE_REPEL_RADIUS, 2);
+                this.x += (dx / distance) * force * 2.5;
+                this.y += (dy / distance) * force * 2.5;
             }
         }
     }
@@ -73,7 +73,7 @@ class Particle {
     draw() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(220, 220, 225, 0.8)';
+        ctx.fillStyle = 'rgba(230, 230, 235, 0.9)';
         ctx.fill();
     }
 }
@@ -82,15 +82,16 @@ function init() {
     resize();
     particles = [];
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-        particles.push(new Particle());
+        particles.push(new OrganicNode(i));
     }
     animate();
 }
 
 function animate() {
+    time += FLOW_SPEED;
     ctx.clearRect(0, 0, width, height);
     
-    // Draw connecting lines first so they sit UNDER the nodes
+    // Draw organic connections underneath the nodes
     for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
             let dx = particles[i].x - particles[j].x;
@@ -100,18 +101,26 @@ function animate() {
             if (distance < CONNECTION_DISTANCE) {
                 ctx.beginPath();
                 ctx.moveTo(particles[i].x, particles[i].y);
-                ctx.lineTo(particles[j].x, particles[j].y);
                 
-                // Fade out lines smoothly as nodes pull apart
-                let opacity = 1 - (distance / CONNECTION_DISTANCE);
-                ctx.strokeStyle = `rgba(200, 200, 220, ${opacity * 0.4})`;
+                // Calculate an organic curve control point
+                // This makes the lines bend gently like fluid strands rather than rigid lasers
+                let midX = (particles[i].x + particles[j].x) / 2;
+                let midY = (particles[i].y + particles[j].y) / 2;
+                
+                let curveOffsetX = Math.sin(time * 2 + i) * 20;
+                let curveOffsetY = Math.cos(time * 2 + j) * 20;
+
+                ctx.quadraticCurveTo(midX + curveOffsetX, midY + curveOffsetY, particles[j].x, particles[j].y);
+                
+                let opacity = Math.pow(1 - (distance / CONNECTION_DISTANCE), 1.5);
+                ctx.strokeStyle = `rgba(200, 200, 220, ${opacity * 0.35})`;
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
         }
     }
     
-    // Update and draw the flat circles on top
+    // Draw the nodes
     particles.forEach(p => {
         p.update();
         p.draw();
@@ -120,5 +129,5 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Start the simulation
+// Boot up the visualizer
 init();
